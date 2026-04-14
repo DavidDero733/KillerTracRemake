@@ -27,12 +27,15 @@ export default function Header({ totalCount, user, onLogin }: HeaderProps) {
           <img src={user.photoURL || ''} alt={user.displayName || ''} className="w-8 h-8 rounded-full border border-orange-halloween" referrerPolicy="no-referrer" />
         </div>
       ) : (
-        <button 
-          onClick={onLogin}
-          className="ml-2 px-3 py-1 bg-orange-halloween text-bg-deep font-bold text-xs rounded-full hover:bg-amber-halloween transition-colors"
-        >
-          Login
-        </button>
+        <div className="flex flex-col items-end gap-1 ml-2">
+          <button 
+            onClick={onLogin}
+            className="px-3 py-1 bg-orange-halloween text-bg-deep font-bold text-xs rounded-full hover:bg-amber-halloween transition-colors"
+          >
+            Login
+          </button>
+          <span className="text-[8px] text-muted-halloween uppercase font-bold tracking-tighter">Optional</span>
+        </div>
       )}
     </header>
   );

@@ -70,7 +70,7 @@ service cloud.firestore {
              isValidNumber(data.lat) &&
              isValidNumber(data.lng) &&
              isValidString(data.ts, 50) &&
-             data.uid == request.auth.uid;
+             (data.uid == 'anonymous' || (isAuthenticated() && data.uid == request.auth.uid));
     }
 
     function isValidZone(data) {
@@ -80,7 +80,7 @@ service cloud.firestore {
              isValidNumber(data.lat) &&
              isValidNumber(data.lng) &&
              isValidString(data.ts, 50) &&
-             data.uid == request.auth.uid;
+             (data.uid == 'anonymous' || (isAuthenticated() && data.uid == request.auth.uid));
     }
 
     function isValidKiller(data) {
@@ -89,32 +89,32 @@ service cloud.firestore {
              isValidString(data.short, 20) &&
              isValidString(data.em, 10) &&
              isValidString(data.color, 20) &&
-             data.uid == request.auth.uid;
+             (data.uid == 'anonymous' || (isAuthenticated() && data.uid == request.auth.uid));
     }
 
     // Rules
     match /sightings/{sightingId} {
-      allow read: if true; // Publicly readable for the community
-      allow create: if isAuthenticated() && isValidSighting(request.resource.data);
-      allow update, delete: if isOwner(resource.data.uid) || isAdmin();
+      allow read: if true;
+      allow create: if isValidSighting(request.resource.data);
+      allow update, delete: if (isAuthenticated() && isOwner(resource.data.uid)) || isAdmin();
     }
 
     match /zones/{zoneId} {
       allow read: if true;
-      allow create: if isAuthenticated() && isValidZone(request.resource.data);
-      allow update, delete: if isOwner(resource.data.uid) || isAdmin();
+      allow create: if isValidZone(request.resource.data);
+      allow update, delete: if (isAuthenticated() && isOwner(resource.data.uid)) || isAdmin();
     }
 
     match /killers/{killerId} {
       allow read: if true;
-      allow create: if isAuthenticated() && isValidKiller(request.resource.data);
-      allow update, delete: if isOwner(resource.data.uid) || isAdmin();
+      allow create: if isValidKiller(request.resource.data);
+      allow update, delete: if (isAuthenticated() && isOwner(resource.data.uid)) || isAdmin();
     }
 
     match /routes/{routeId} {
       allow read: if true;
-      allow create: if isAuthenticated(); // Simplified for now
-      allow update, delete: if isOwner(resource.data.uid) || isAdmin();
+      allow create: if true; // Allow unauthenticated routes
+      allow update, delete: if (isAuthenticated() && isOwner(resource.data.uid)) || isAdmin();
     }
 
     // Default deny

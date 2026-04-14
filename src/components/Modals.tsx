@@ -35,7 +35,6 @@ export function SightingModal({ onClose, pendingLoc, setPendingLoc, customKiller
   const allKillers = [...DEFAULT_KILLERS, ...customKillers];
 
   const handleSubmit = async () => {
-    if (!user) { onLogin(); return; }
     if (!selKillerId) { showToast('👻 Choose who you spotted!'); return; }
     if (!pendingLoc) { showToast('📍 Mark a location on the map.'); return; }
 
@@ -53,7 +52,7 @@ export function SightingModal({ onClose, pendingLoc, setPendingLoc, customKiller
         lng: pendingLoc.lng,
         note: note.trim() || null,
         ts: new Date().toISOString(),
-        uid: user.uid
+        uid: user?.uid || 'anonymous'
       });
       showToast(`${k.em} Sighting logged! Stay safe.`);
       onClose();
@@ -139,7 +138,6 @@ export function ZoneModal({ type, onClose, pendingLoc, setPendingLoc, onPickOnMa
   const isSafe = type === 'safe';
 
   const handleSubmit = async () => {
-    if (!user) { onLogin(); return; }
     if (!name.trim()) { showToast('Please give this location a name.'); return; }
     if (!pendingLoc) { showToast('📍 Mark a location on the map.'); return; }
 
@@ -153,7 +151,7 @@ export function ZoneModal({ type, onClose, pendingLoc, setPendingLoc, onPickOnMa
         lng: pendingLoc.lng,
         note: note.trim() || null,
         ts: new Date().toISOString(),
-        uid: user.uid
+        uid: user?.uid || 'anonymous'
       });
       showToast(`${isSafe ? '🛡️' : '⚠️'} ${name} added to the map!`);
       onClose();
@@ -234,7 +232,6 @@ export function CustomKillerModal({ onClose, user, showToast }: { onClose: () =>
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!user) return;
     if (!name.trim()) { showToast('Give your killer a name!'); return; }
     
     setIsSubmitting(true);
@@ -245,7 +242,7 @@ export function CustomKillerModal({ onClose, user, showToast }: { onClose: () =>
         short: name.trim().split(' ')[0].substring(0, 8),
         em: emoji,
         color,
-        uid: user.uid
+        uid: user?.uid || 'anonymous'
       });
       showToast(`${emoji} ${name} added to the roster!`);
       onClose();
