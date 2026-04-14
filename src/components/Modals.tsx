@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { User } from 'firebase/auth';
 import { collection, addDoc } from 'firebase/firestore';
-import { db, OperationType, handleFirestoreError } from '../firebase';
+import { getDbInstance, OperationType, getFirestoreErrorInfo } from '../firebase';
 import { CustomKiller, Killer } from '../types';
 import { cn } from '../lib/utils';
+import { FirebaseError } from 'firebase/app';
 
 const DEFAULT_KILLERS: Killer[] = [
   { id: 'michael', name: 'Michael Myers', short: 'Michael', em: '🎭', color: '#f97316' },
@@ -42,6 +43,7 @@ export function SightingModal({ onClose, pendingLoc, setPendingLoc, customKiller
     const k = allKillers.find(k => k.id === selKillerId)!;
     
     try {
+      const db = getDbInstance();
       await addDoc(collection(db, 'sightings'), {
         kid: k.id,
         name: k.name,
@@ -56,7 +58,9 @@ export function SightingModal({ onClose, pendingLoc, setPendingLoc, customKiller
       showToast(`${k.em} Sighting logged! Stay safe.`);
       onClose();
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'sightings');
+      const errInfo = getFirestoreErrorInfo(error, OperationType.CREATE, 'sightings');
+      showToast(`Error: ${errInfo.error}`);
+      console.error(errInfo);
     } finally {
       setIsSubmitting(false);
     }
@@ -141,6 +145,7 @@ export function ZoneModal({ type, onClose, pendingLoc, setPendingLoc, onPickOnMa
 
     setIsSubmitting(true);
     try {
+      const db = getDbInstance();
       await addDoc(collection(db, 'zones'), {
         type,
         name: name.trim(),
@@ -153,7 +158,9 @@ export function ZoneModal({ type, onClose, pendingLoc, setPendingLoc, onPickOnMa
       showToast(`${isSafe ? '🛡️' : '⚠️'} ${name} added to the map!`);
       onClose();
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'zones');
+      const errInfo = getFirestoreErrorInfo(error, OperationType.CREATE, 'zones');
+      showToast(`Error: ${errInfo.error}`);
+      console.error(errInfo);
     } finally {
       setIsSubmitting(false);
     }
@@ -232,6 +239,7 @@ export function CustomKillerModal({ onClose, user, showToast }: { onClose: () =>
     
     setIsSubmitting(true);
     try {
+      const db = getDbInstance();
       await addDoc(collection(db, 'killers'), {
         name: name.trim(),
         short: name.trim().split(' ')[0].substring(0, 8),
@@ -242,7 +250,9 @@ export function CustomKillerModal({ onClose, user, showToast }: { onClose: () =>
       showToast(`${emoji} ${name} added to the roster!`);
       onClose();
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'killers');
+      const errInfo = getFirestoreErrorInfo(error, OperationType.CREATE, 'killers');
+      showToast(`Error: ${errInfo.error}`);
+      console.error(errInfo);
     } finally {
       setIsSubmitting(false);
     }

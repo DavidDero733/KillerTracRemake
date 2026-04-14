@@ -2,6 +2,16 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle, Polyline 
 import L from 'leaflet';
 import { Sighting, Zone, Route } from '../types';
 import { formatDistanceToNow } from 'date-fns';
+import { useEffect } from 'react';
+
+// Fix for Leaflet default icon issues in production
+// @ts-ignore
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 interface MapViewProps {
   sightings: Sighting[];
@@ -33,6 +43,11 @@ function MapEvents({ mode, setMode, setPendingLoc, setActiveModal }: any) {
 }
 
 export default function MapView({ sightings, zones, routes, mode, setMode, setPendingLoc, setActiveModal, zoneType }: MapViewProps) {
+  // Ensure we don't crash if data is missing
+  const validSightings = sightings.filter(s => s && typeof s.lat === 'number' && typeof s.lng === 'number');
+  const validZones = zones.filter(z => z && typeof z.lat === 'number' && typeof z.lng === 'number');
+  const validRoutes = routes.filter(r => r && Array.isArray(r.points) && r.points.length > 0);
+
   return (
     <MapContainer 
       center={[39.5, -98.35]} 
@@ -48,13 +63,13 @@ export default function MapView({ sightings, zones, routes, mode, setMode, setPe
       <MapEvents mode={mode} setMode={setMode} setPendingLoc={setPendingLoc} setActiveModal={setActiveModal} />
 
       {/* Sightings */}
-      {sightings.map(s => (
+      {validSightings.map(s => (
         <Marker 
           key={s.id} 
           position={[s.lat, s.lng]}
           icon={L.divIcon({
             className: '',
-            html: `<div style="width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${s.color};border:2.5px solid rgba(255,255,255,0.22);box-shadow:0 3px 12px ${s.color}88;display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:1.05rem;display:block;line-height:1;">${s.em}</span></div>`,
+            html: `<div style="width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${s.color || '#f97316'};border:2.5px solid rgba(255,255,255,0.22);box-shadow:0 3px 12px ${s.color || '#f97316'}88;display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:1.05rem;display:block;line-height:1;">${s.em || '🎃'}</span></div>`,
             iconSize: [36, 36],
             iconAnchor: [18, 36],
             popupAnchor: [0, -40],
@@ -62,10 +77,10 @@ export default function MapView({ sightings, zones, routes, mode, setMode, setPe
         >
           <Popup>
             <div className="flex items-center gap-3 mb-1.5">
-              <span className="text-3xl leading-none">{s.em}</span>
+              <span className="text-3xl leading-none">{s.em || '🎃'}</span>
               <div>
-                <div className="font-serif text-sm font-semibold text-amber-halloween">{s.name}</div>
-                <div className="text-[10px] text-muted-halloween">{formatDistanceToNow(new Date(s.ts))} ago</div>
+                <div className="font-serif text-sm font-semibold text-amber-halloween">{s.name || 'Unknown'}</div>
+                <div className="text-[10px] text-muted-halloween">{s.ts ? formatDistanceToNow(new Date(s.ts)) : 'some time'} ago</div>
               </div>
             </div>
             {s.note && <div className="text-xs text-warm-halloween leading-relaxed pt-2 border-t border-orange-halloween/20">"{s.note}"</div>}
@@ -74,7 +89,7 @@ export default function MapView({ sightings, zones, routes, mode, setMode, setPe
       ))}
 
       {/* Zones */}
-      {zones.map(z => {
+      {validZones.map(z => {
         const isSafe = z.type === 'safe';
         const color = isSafe ? '#22c55e' : '#ef4444';
         const em = isSafe ? '🛡️' : '⚠️';
@@ -105,8 +120,8 @@ export default function MapView({ sightings, zones, routes, mode, setMode, setPe
                 <div className="flex items-center gap-3 mb-1.5">
                   <span className="text-2xl leading-none">{em}</span>
                   <div>
-                    <div className="font-serif text-sm font-semibold text-amber-halloween">{z.name}</div>
-                    <div className="text-[10px] text-muted-halloween">{formatDistanceToNow(new Date(z.ts))} ago</div>
+                    <div className="font-serif text-sm font-semibold text-amber-halloween">{z.name || 'Zone'}</div>
+                    <div className="text-[10px] text-muted-halloween">{z.ts ? formatDistanceToNow(new Date(z.ts)) : 'some time'} ago</div>
                   </div>
                 </div>
                 {z.note && <div className="text-xs text-warm-halloween leading-relaxed pt-2 border-t border-orange-halloween/20">{z.note}</div>}
@@ -117,20 +132,20 @@ export default function MapView({ sightings, zones, routes, mode, setMode, setPe
       })}
 
       {/* Routes */}
-      {routes.map(r => (
+      {validRoutes.map(r => (
         <Polyline 
           key={r.id}
           positions={r.points}
           pathOptions={{
-            color: r.color,
+            color: r.color || '#3b82f6',
             weight: 3.5,
             opacity: 0.85,
             dashArray: r.routeType === 'patrol' ? undefined : '8, 6'
           }}
         >
           <Popup>
-            <div className="font-serif text-sm font-semibold text-amber-halloween">{r.name}</div>
-            <div className="text-[10px] text-muted-halloween mb-1">{formatDistanceToNow(new Date(r.ts))} ago</div>
+            <div className="font-serif text-sm font-semibold text-amber-halloween">{r.name || 'Route'}</div>
+            <div className="text-[10px] text-muted-halloween mb-1">{r.ts ? formatDistanceToNow(new Date(r.ts)) : 'some time'} ago</div>
             {r.note && <div className="text-xs text-warm-halloween leading-relaxed pt-2 border-t border-orange-halloween/20">{r.note}</div>}
           </Popup>
         </Polyline>
@@ -138,3 +153,4 @@ export default function MapView({ sightings, zones, routes, mode, setMode, setPe
     </MapContainer>
   );
 }
+

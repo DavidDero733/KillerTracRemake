@@ -1,11 +1,37 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+let app: FirebaseApp | null = null;
+let authInstance: Auth | null = null;
+let dbInstance: Firestore | null = null;
+
+function getFirebaseApp() {
+  if (!app) {
+    if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes('TODO')) {
+      throw new Error('Firebase configuration is missing or incomplete. Please check your firebase-applet-config.json file.');
+    }
+    app = initializeApp(firebaseConfig);
+  }
+  return app;
+}
+
+export function getAuthInstance(): Auth {
+  if (!authInstance) {
+    authInstance = getAuth(getFirebaseApp());
+  }
+  return authInstance;
+}
+
+export function getDbInstance(): Firestore {
+  if (!dbInstance) {
+    dbInstance = getFirestore(getFirebaseApp(), firebaseConfig.firestoreDatabaseId);
+  }
+  return dbInstance;
+}
+
+
 
 export enum OperationType {
   CREATE = 'create',
@@ -35,8 +61,9 @@ export interface FirestoreErrorInfo {
   }
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
+export function getFirestoreErrorInfo(error: unknown, operationType: OperationType, path: string | null): FirestoreErrorInfo {
+  const auth = getAuthInstance();
+  return {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
       userId: auth.currentUser?.uid,
@@ -53,7 +80,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     },
     operationType,
     path
-  }
+  };
+}
+
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo = getFirestoreErrorInfo(error, operationType, path);
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
+

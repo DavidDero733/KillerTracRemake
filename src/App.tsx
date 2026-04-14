@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { collection, onSnapshot, query, orderBy, getDocFromServer, doc } from 'firebase/firestore';
-import { auth, db, OperationType, handleFirestoreError } from './firebase';
+import { getAuthInstance, getDbInstance, OperationType, handleFirestoreError } from './firebase';
 import { Sighting, Zone, Route, CustomKiller } from './types';
 import Header from './components/Header';
 import MapView from './components/MapView';
@@ -34,6 +34,7 @@ export default function App() {
   useEffect(() => {
     async function testConnection() {
       try {
+        const db = getDbInstance();
         await getDocFromServer(doc(db, 'test', 'connection'));
       } catch (error) {
         if (error instanceof Error && error.message.includes('the client is offline')) {
@@ -45,50 +46,63 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsAuthReady(true);
-    });
-    return unsubscribe;
+    try {
+      const auth = getAuthInstance();
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user);
+        setIsAuthReady(true);
+      });
+      return unsubscribe;
+    } catch (error) {
+      console.error("Auth initialization failed", error);
+      setIsAuthReady(true); // Still ready, just not logged in
+    }
   }, []);
 
   useEffect(() => {
     if (!isAuthReady) return;
 
-    const qSightings = query(collection(db, 'sightings'), orderBy('ts', 'desc'));
-    const unsubSightings = onSnapshot(qSightings, (snapshot) => {
-      setSightings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sighting)));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'sightings'));
+    try {
+      const db = getDbInstance();
+      const qSightings = query(collection(db, 'sightings'), orderBy('ts', 'desc'));
+      const unsubSightings = onSnapshot(qSightings, (snapshot) => {
+        setSightings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sighting)));
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'sightings'));
 
-    const qZones = query(collection(db, 'zones'), orderBy('ts', 'desc'));
-    const unsubZones = onSnapshot(qZones, (snapshot) => {
-      setZones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Zone)));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'zones'));
+      const qZones = query(collection(db, 'zones'), orderBy('ts', 'desc'));
+      const unsubZones = onSnapshot(qZones, (snapshot) => {
+        setZones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Zone)));
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'zones'));
 
-    const qRoutes = query(collection(db, 'routes'), orderBy('ts', 'desc'));
-    const unsubRoutes = onSnapshot(qRoutes, (snapshot) => {
-      setRoutes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Route)));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'routes'));
+      const qRoutes = query(collection(db, 'routes'), orderBy('ts', 'desc'));
+      const unsubRoutes = onSnapshot(qRoutes, (snapshot) => {
+        setRoutes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Route)));
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'routes'));
 
-    const qKillers = query(collection(db, 'killers'));
-    const unsubKillers = onSnapshot(qKillers, (snapshot) => {
-      setCustomKillers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomKiller)));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'killers'));
+      const qKillers = query(collection(db, 'killers'));
+      const unsubKillers = onSnapshot(qKillers, (snapshot) => {
+        setCustomKillers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomKiller)));
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'killers'));
 
-    return () => {
-      unsubSightings();
-      unsubZones();
-      unsubRoutes();
-      unsubKillers();
-    };
+      return () => {
+        unsubSightings();
+        unsubZones();
+        unsubRoutes();
+        unsubKillers();
+      };
+    } catch (error) {
+      console.error("Firestore initialization failed", error);
+    }
   }, [isAuthReady]);
 
   const login = async () => {
-    const provider = new GoogleAuthProvider();
     try {
+      const auth = getAuthInstance();
+      const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Login failed", error);
+      showToast("Login failed. Check if popups are blocked.");
     }
   };
 
