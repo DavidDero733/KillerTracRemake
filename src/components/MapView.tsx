@@ -1,8 +1,8 @@
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Sighting, Zone, Route } from '../types';
 import { formatDistanceToNow } from 'date-fns';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 // Fix for Leaflet default icon issues in production
 // @ts-ignore
@@ -23,6 +23,9 @@ interface MapViewProps {
   setActiveModal: (modal: 'sighting' | 'zone' | 'route' | 'killer' | null) => void;
   zoneType: 'safe' | 'hot';
   showToast: (msg: string) => void;
+  userLocation: { lat: number; lng: number } | null;
+  isTracking: boolean;
+  setIsTracking: (tracking: boolean) => void;
 }
 
 function MapEvents({ mode, setMode, setPendingLoc, setActiveModal }: any) {
@@ -42,7 +45,19 @@ function MapEvents({ mode, setMode, setPendingLoc, setActiveModal }: any) {
   return null;
 }
 
-export default function MapView({ sightings, zones, routes, mode, setMode, setPendingLoc, setActiveModal, zoneType }: MapViewProps) {
+function MapController({ center, shouldFly }: { center: { lat: number; lng: number } | null, shouldFly: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center && shouldFly) {
+      map.flyTo([center.lat, center.lng], 16, { animate: true, duration: 1 });
+    }
+  }, [center, shouldFly, map]);
+  return null;
+}
+
+export default function MapView({ sightings, zones, routes, mode, setMode, setPendingLoc, setActiveModal, zoneType, userLocation, isTracking, setIsTracking }: MapViewProps) {
+  const [shouldFly, setShouldFly] = useState(false);
+
   // Ensure we don't crash if data is missing
   const validSightings = sightings.filter(s => s && typeof s.lat === 'number' && typeof s.lng === 'number');
   const validZones = zones.filter(z => z && typeof z.lat === 'number' && typeof z.lng === 'number');
@@ -61,6 +76,42 @@ export default function MapView({ sightings, zones, routes, mode, setMode, setPe
       />
       
       <MapEvents mode={mode} setMode={setMode} setPendingLoc={setPendingLoc} setActiveModal={setActiveModal} />
+      <MapController center={userLocation} shouldFly={shouldFly} />
+
+      {/* GPS Controls Overlay */}
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+        <button 
+          onClick={() => {
+            if (!isTracking) {
+              setIsTracking(true);
+              setShouldFly(true);
+            } else {
+              setShouldFly(true); // Recenter if already tracking
+              // Reset shouldFly after a moment so it doesn't lock the user's pan
+              setTimeout(() => setShouldFly(false), 1500);
+            }
+          }}
+          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-xl transition-all border-2 ${isTracking ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-bg-card border-border-halloween text-muted-halloween hover:border-orange-halloween hover:text-orange-halloween'}`}
+          title="Locate Me"
+        >
+          📍
+        </button>
+      </div>
+
+      {/* User Location Marker */}
+      {userLocation && (
+        <Marker 
+          position={[userLocation.lat, userLocation.lng]}
+          icon={L.divIcon({
+            className: '',
+            html: `<div style="width:20px;height:20px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 0 15px #3b82f6;animation:pulse 2s infinite;"></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10],
+          })}
+        >
+          <Popup>You are here</Popup>
+        </Marker>
+      )}
 
       {/* Sightings */}
       {validSightings.map(s => (

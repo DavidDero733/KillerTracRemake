@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
-import { collection, onSnapshot, query, orderBy, getDocFromServer, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, getDocFromServer, doc, deleteDoc } from 'firebase/firestore';
 import { getAuthInstance, getDbInstance, OperationType, handleFirestoreError } from './firebase';
 import { Sighting, Zone, Route, CustomKiller } from './types';
 import Header from './components/Header';
@@ -29,6 +29,9 @@ export default function App() {
   const [zoneType, setZoneType] = useState<'safe' | 'hot'>('safe');
   const [pendingLoc, setPendingLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
 
   // Test connection
   useEffect(() => {
@@ -95,6 +98,30 @@ export default function App() {
     }
   }, [isAuthReady]);
 
+  useEffect(() => {
+    if (!isTracking) return;
+    
+    if (!navigator.geolocation) {
+      showToast("Geolocation is not supported by your browser");
+      setIsTracking(false);
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      (err) => {
+        console.error(err);
+        showToast("GPS access denied or failed.");
+        setIsTracking(false);
+      },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [isTracking]);
+
   const login = async () => {
     try {
       const auth = getAuthInstance();
@@ -109,6 +136,17 @@ export default function App() {
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3200);
+  };
+
+  const deleteKiller = async (id: string) => {
+    try {
+      const db = getDbInstance();
+      await deleteDoc(doc(db, 'killers', id));
+      showToast("Killer removed from roster.");
+    } catch (error) {
+      console.error("Failed to delete killer", error);
+      showToast("Failed to delete killer.");
+    }
   };
 
   if (!isAuthReady) return null;
@@ -132,6 +170,9 @@ export default function App() {
           setActiveModal={setActiveModal}
           zoneType={zoneType}
           showToast={showToast}
+          userLocation={userLocation}
+          isTracking={isTracking}
+          setIsTracking={setIsTracking}
         />
 
         {/* Mode Banners */}
@@ -173,6 +214,9 @@ export default function App() {
           sightings={sightings}
           zones={zones}
           routes={routes}
+          customKillers={customKillers}
+          user={user}
+          onDeleteKiller={deleteKiller}
         />
       </main>
 
