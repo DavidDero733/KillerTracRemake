@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "Sighting": {
+      "title": "Sighting",
+      "description": "A report of a killer sighting.",
+      "type": "object",
+      "properties": {
+        "kid": { "type": "string", "description": "Killer ID" },
+        "name": { "type": "string", "description": "Killer name" },
+        "em": { "type": "string", "description": "Killer emoji" },
+        "color": { "type": "string", "description": "Killer color hex" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "note": { "type": "string" },
+        "ts": { "type": "string", "format": "date-time" },
+        "uid": { "type": "string", "description": "User ID of the reporter" }
+      },
+      "required": ["kid", "name", "em", "color", "lat", "lng", "ts", "uid"]
+    },
+    "Zone": {
+      "title": "Zone",
+      "description": "A safe zone or hot spot.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["safe", "hot"] },
+        "name": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "note": { "type": "string" },
+        "ts": { "type": "string", "format": "date-time" },
+        "uid": { "type": "string" }
+      },
+      "required": ["type", "name", "lat", "lng", "ts", "uid"]
+    },
+    "Route": {
+      "title": "Route",
+      "description": "A path drawn on the map.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "routeType": { "type": "string", "enum": ["escape", "patrol", "treats", "avoid"] },
+        "color": { "type": "string" },
+        "points": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+        "note": { "type": "string" },
+        "ts": { "type": "string", "format": "date-time" },
+        "uid": { "type": "string" }
+      },
+      "required": ["name", "routeType", "color", "points", "ts", "uid"]
+    },
+    "CustomKiller": {
+      "title": "CustomKiller",
+      "description": "A user-defined killer.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "short": { "type": "string" },
+        "em": { "type": "string" },
+        "color": { "type": "string" },
+        "uid": { "type": "string" }
+      },
+      "required": ["name", "short", "em", "color", "uid"]
+    }
+  },
+  "firestore": {
+    "/sightings/{sightingId}": {
+      "schema": "Sighting",
+      "description": "Collection of killer sightings."
+    },
+    "/zones/{zoneId}": {
+      "schema": "Zone",
+      "description": "Collection of safe zones and hot spots."
+    },
+    "/routes/{routeId}": {
+      "schema": "Route",
+      "description": "Collection of shared routes."
+    },
+    "/killers/{killerId}": {
+      "schema": "CustomKiller",
+      "description": "Collection of custom killers."
+    }
+  }
+}

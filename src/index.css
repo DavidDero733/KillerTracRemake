@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cinzel", serif;
+
+  --color-bg-deep: #0d0703;
+  --color-bg-dark: #170c04;
+  --color-bg-card: #261408;
+  --color-bg-hover: #35200e;
+  --color-orange-halloween: #f97316;
+  --color-amber-halloween: #f59e0b;
+  --color-cream-halloween: #fef3c7;
+  --color-warm-halloween: #fdba74;
+  --color-muted-halloween: #92400e;
+  --color-border-halloween: rgba(249, 115, 22, 0.18);
+}
+
+@layer base {
+  body {
+    @apply bg-bg-deep text-cream-halloween font-sans h-screen overflow-hidden;
+  }
+}
+
+/* Leaflet Overrides */
+.leaflet-container {
+  @apply w-full h-full bg-bg-deep;
+}
+
+.leaflet-popup-content-wrapper {
+  @apply !bg-bg-dark !border !border-orange-halloween/25 !rounded-xl !shadow-2xl !text-cream-halloween;
+}
+
+.leaflet-popup-tip {
+  @apply !bg-bg-dark;
+}
+
+.leaflet-popup-content {
+  @apply !text-cream-halloween !font-sans !m-3;
+}
+
+.leaflet-control-zoom a {
+  @apply !bg-bg-dark !text-warm-halloween !border-orange-halloween/25;
+}
+
+.leaflet-control-zoom a:hover {
+  @apply !bg-bg-card !text-orange-halloween;
+}
+
+/* Custom Animations */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  70% { transform: scale(1.06); opacity: 0.3; }
+  100% { transform: scale(1); opacity: 0.6; }
+}
+
+.pulse-path {
+  animation: pulse-ring 2.2s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-border-halloween rounded-full;
+}
+

@@ -1,0 +1,125 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: sightings
+// Fields:
+//   - kid: string (required) - Killer ID
+//   - name: string (required) - Killer name
+//   - em: string (required) - Killer emoji
+//   - color: string (required) - Killer color hex
+//   - lat: number (required) - Latitude
+//   - lng: number (required) - Longitude
+//   - note: string (optional) - Description
+//   - ts: string (required) - ISO timestamp
+//   - uid: string (required) - User ID
+//
+// Collection: zones
+// Fields:
+//   - type: string (required, 'safe'|'hot')
+//   - name: string (required)
+//   - lat: number (required)
+//   - lng: number (required)
+//   - note: string (optional)
+//   - ts: string (required)
+//   - uid: string (required)
+//
+// Collection: killers
+// Fields:
+//   - name: string (required)
+//   - short: string (required)
+//   - em: string (required)
+//   - color: string (required)
+//   - uid: string (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "dnt7dero@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    function isValidNumber(val) {
+      return val is number;
+    }
+
+    // Domain Validators
+    function isValidSighting(data) {
+      return data.keys().hasAll(['kid', 'name', 'em', 'color', 'lat', 'lng', 'ts', 'uid']) &&
+             isValidString(data.kid, 50) &&
+             isValidString(data.name, 100) &&
+             isValidString(data.em, 10) &&
+             isValidString(data.color, 20) &&
+             isValidNumber(data.lat) &&
+             isValidNumber(data.lng) &&
+             isValidString(data.ts, 50) &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidZone(data) {
+      return data.keys().hasAll(['type', 'name', 'lat', 'lng', 'ts', 'uid']) &&
+             data.type in ['safe', 'hot'] &&
+             isValidString(data.name, 100) &&
+             isValidNumber(data.lat) &&
+             isValidNumber(data.lng) &&
+             isValidString(data.ts, 50) &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidKiller(data) {
+      return data.keys().hasAll(['name', 'short', 'em', 'color', 'uid']) &&
+             isValidString(data.name, 100) &&
+             isValidString(data.short, 20) &&
+             isValidString(data.em, 10) &&
+             isValidString(data.color, 20) &&
+             data.uid == request.auth.uid;
+    }
+
+    // Rules
+    match /sightings/{sightingId} {
+      allow read: if true; // Publicly readable for the community
+      allow create: if isAuthenticated() && isValidSighting(request.resource.data);
+      allow update, delete: if isOwner(resource.data.uid) || isAdmin();
+    }
+
+    match /zones/{zoneId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidZone(request.resource.data);
+      allow update, delete: if isOwner(resource.data.uid) || isAdmin();
+    }
+
+    match /killers/{killerId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidKiller(request.resource.data);
+      allow update, delete: if isOwner(resource.data.uid) || isAdmin();
+    }
+
+    match /routes/{routeId} {
+      allow read: if true;
+      allow create: if isAuthenticated(); // Simplified for now
+      allow update, delete: if isOwner(resource.data.uid) || isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

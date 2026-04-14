@@ -1,0 +1,6 @@
+{
+  "name": "Halloween Night Watch",
+  "description": "Interactive survival map to track fictional killers, mark safe zones, and share routes in real-time.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": []
+}
